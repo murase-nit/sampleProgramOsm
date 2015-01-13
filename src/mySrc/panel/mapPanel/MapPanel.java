@@ -7,17 +7,22 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Double;
 import java.awt.image.BufferedImage;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
+import javax.security.auth.callback.LanguageCallback;
+import javax.swing.JApplet;
 import javax.swing.JPanel;
 
 import mySrc.coordinate.ConvertLngLatAppletCoordinate;
 import mySrc.coordinate.GetLngLatOsm;
+import mySrc.db.getData.OsmRoadDataGeom;
 import mySrc.panel.MyMap;
 import mySrc.panel.inputPanel.InputPanel;
 import mySrc.panel.outputPanel.OutputPanel;
@@ -63,6 +68,7 @@ public class MapPanel extends JPanel{
 	public MapPanelEvent _mapPanelEvent;
 	public ConvertLngLatAppletCoordinate _convert;
 	
+	// 地図基本データ.
 	/** 現在の緯度経度 */
 	public Point2D _lngLat = new Point2D.Double(DEFAULT_LNG, DEFAULT_LAT);
 	/** 現在のスケール*/
@@ -75,6 +81,23 @@ public class MapPanel extends JPanel{
 	/** 地図画像 */
 	public BufferedImage _bufferedImage;
 	public Image _image;
+	
+	// 道路基本データ.
+	/** リンクID */
+	public ArrayList<Integer> _linkId;
+	/** (sourcePoint, targetPoint)の組 */
+	public ArrayList<Line2D> _link;
+	/** source id */
+	public ArrayList<Integer> _sourceId;
+	/** target id */
+	public ArrayList<Integer> _targetId;
+	/** km */
+	public ArrayList<java.lang.Double> _length;
+	/** 道路のクラス */
+	public ArrayList<Integer> _clazz;
+	/** 道路の形状を表す */
+	public ArrayList<ArrayList<Point2D.Double>> _arc;
+	public boolean _roadDataFlg = false;
 	
 	public MapPanel(OutputPanel aOutputPanel, MyMap aMyMap) {
 		this.setPreferredSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT));
@@ -139,8 +162,43 @@ public class MapPanel extends JPanel{
 		_mapPanelPaint.init(DEFAULT_MARKER_SIZE, g, _convert);
 		// 地図の描画.
 		_mapPanelPaint.paintMap(_image, _bufferedImage);
+		// 中心点の表示
 		_mapPanelPaint.paintCenterPoint(_lngLat, _convert);
+		// 道路データの描画.
+		_mapPanelPaint.paintRoadData(_roadDataFlg, _link);
+
 	}
+	
+	
+	
+	
+	/**
+	 * データベースからデータを取得し変数へ格納.
+	 */
+	public void insertRoadData(){
+		if (_roadDataFlg == true) {
+			_roadDataFlg = false;
+		} else {
+			OsmRoadDataGeom osmRoadDataGeom = new OsmRoadDataGeom();
+			osmRoadDataGeom.startConnection();
+			osmRoadDataGeom.insertOsmRoadData(_upperLeftLngLat, _lowerRightLngLat);
+			osmRoadDataGeom.endConnection();
+			_linkId = osmRoadDataGeom._linkId;
+			_link = osmRoadDataGeom._link;
+			_sourceId = osmRoadDataGeom._sourceId;
+			_targetId = osmRoadDataGeom._targetId;
+			_length = osmRoadDataGeom._length;
+			_clazz = osmRoadDataGeom._clazz;
+			_arc = osmRoadDataGeom._arc;
+			_roadDataFlg = true;
+		}
+		repaint();
+		
+	}
+	
+	
+	
+	
 	
 	// setter関数.
 	public void setInputPanel(InputPanel aInputPanel){
