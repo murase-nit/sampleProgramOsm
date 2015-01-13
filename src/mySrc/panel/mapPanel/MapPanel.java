@@ -26,6 +26,8 @@ import mySrc.db.getData.OsmRoadDataGeom;
 import mySrc.panel.MyMap;
 import mySrc.panel.inputPanel.InputPanel;
 import mySrc.panel.outputPanel.OutputPanel;
+import mySrc.yahooAPI.ContentsGeocorder;
+import mySrc.yahooAPI.LocalSearch;
 
 /**
  * 左下の画面(地図表示)
@@ -96,8 +98,22 @@ public class MapPanel extends JPanel{
 	/** 道路のクラス */
 	public ArrayList<Integer> _clazz;
 	/** 道路の形状を表す */
-	public ArrayList<ArrayList<Point2D.Double>> _arc;
+	public ArrayList<ArrayList<Point2D>> _arc;
 	public boolean _roadDataFlg = false;
+	
+	
+	// 施設データ関係.
+	// Yahoo施設データ.
+	/** 周辺建物の緯度経度 */
+	public ArrayList<Point2D> _lnglatDataArrayList = new ArrayList<Point2D>();
+	/** 建物の名前. */
+	protected ArrayList<String> _pointDataNameArrayList = new ArrayList<String>(); 
+	/** マーカーのサイズ */
+	public boolean _markFlg = false;
+	// OSM施設データ.
+	
+	
+	
 	
 	public MapPanel(OutputPanel aOutputPanel, MyMap aMyMap) {
 		this.setPreferredSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT));
@@ -111,6 +127,27 @@ public class MapPanel extends JPanel{
 	}
 	
 	/**
+	 * 描画関係
+	 */
+	public void paintComponent(Graphics g){
+		super.paintComponent(g);
+		Graphics2D g2 = (Graphics2D)g;
+		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);	// アンチエイリアス処理.
+		
+		// 初期処理.
+		_mapPanelPaint.init(DEFAULT_MARKER_SIZE, g, _convert);
+		// 地図の描画.
+		_mapPanelPaint.paintMap(_image, _bufferedImage);
+		// 中心点の表示
+		_mapPanelPaint.paintCenterPoint(_lngLat, _convert);
+		// 道路データの描画.
+		_mapPanelPaint.paintRoadData(_roadDataFlg, _link);
+		// 周辺の建物の座標を描画.
+		_mapPanelPaint.paintShopData(_markFlg, _lnglatDataArrayList);
+
+	}
+	
+	/**
 	 * 地図の描画
 	 */
 	public void makeMap(){
@@ -118,7 +155,7 @@ public class MapPanel extends JPanel{
 		try {
 			url = new URL(HOSTNAME +
 					PARAM_CENTER + _lngLat.getY() +","+_lngLat.getX() +
-					PARAM_ZOOM + DEFAULT_SCALE +
+					PARAM_ZOOM + _scale +
 					PARAM_SIZE + WINDOW_WIDTH +"x"+ WINDOW_HEIGHT +
 					PARAM_MAPTYPE + DEFAULT_MAPSTYLE
 					);
@@ -151,25 +188,26 @@ public class MapPanel extends JPanel{
 	}
 	
 	/**
-	 * 描画関係
+	 * 入力した場所に移動する(移動ボタン移動したときに実行されるメソッド).
+	 * @param aLnglat		緯度経度.
+	 * @param aLocationName	地名に関するキーワード.
+	 * @param aSelectedType	選択された地図移動タイプ:"lnglat" or "location" or "landmark".
+	 * @param aScale		スケール.
 	 */
-	public void paintComponent(Graphics g){
-		super.paintComponent(g);
-		Graphics2D g2 = (Graphics2D)g;
-		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);	// アンチエイリアス処理.
-		
-		// 初期処理.
-		_mapPanelPaint.init(DEFAULT_MARKER_SIZE, g, _convert);
-		// 地図の描画.
-		_mapPanelPaint.paintMap(_image, _bufferedImage);
-		// 中心点の表示
-		_mapPanelPaint.paintCenterPoint(_lngLat, _convert);
-		// 道路データの描画.
-		_mapPanelPaint.paintRoadData(_roadDataFlg, _link);
-
+	public void moveMap (Point2D.Double aLnglat, String aLocationName, String aSelectedType,int aScale) {
+		// 値が入力されていないときは現在の座標.
+		// 座標が選択されているときは緯度経度で指定地点へ移動.
+		if (aSelectedType.equals("lnglat") && aLnglat.x != 0.0 && aLnglat.y != 0.0) {
+			_lngLat = aLnglat;
+		} else if ((aSelectedType.equals("address")||aSelectedType.equals("landmark"))&&
+				!aLocationName.equals("")) {	// 地名からジオコーディングで指定地点へ移動.
+			ContentsGeocorder contentsGeocorder = new ContentsGeocorder(aLocationName, aSelectedType);
+			Point2D.Double lnglat = contentsGeocorder.getLnglatValue();
+			_lngLat = lnglat;
+		}
+		this._scale = aScale;
+		makeMap();
 	}
-	
-	
 	
 	
 	/**
@@ -193,10 +231,36 @@ public class MapPanel extends JPanel{
 			_roadDataFlg = true;
 		}
 		repaint();
-		
 	}
 	
-	
+	/**
+	 * YahooローカルサーチAPIを使ったHTTPリクエストをしレスポンス(XMLデータ)をメンバ変数へ格納する.
+	 * 格納される変数　_pointDataArray[] _pointInfoNum 周辺建物の緯度経度とその数.
+	 * グループコードと範囲を指定する.
+	 * InputPanelから呼び出される 1番目.
+	 * @param aGroupCode	選択されたグループコード.
+	 * @param aRadius		選択された半径(-1のときは矩形範囲選択　そうでないときは円形範囲選択).
+	 */
+	public void insertShopData(ArrayList<String> aGroupCode, String type){
+		if(_markFlg == true){
+			_markFlg = false;	// 点の描画消す.
+			repaint();
+			return;
+		}
+		_lnglatDataArrayList = new ArrayList<>();
+		_pointDataNameArrayList = new ArrayList<String>();
+		if(type == "yahoo"){	// yahooデータ.
+			for (int i=0; i<aGroupCode.size(); i++) {
+				LocalSearch localSearch;
+				localSearch = new LocalSearch(new Point2D.Double(_upperLeftLngLat.getX(), _lowerRightLngLat.getY()),
+						new Point2D.Double(_lowerRightLngLat.getX(), _upperLeftLngLat.getY()), aGroupCode.get(i));
+				_lnglatDataArrayList.addAll(localSearch.getLatLngArrayList());
+				_pointDataNameArrayList.addAll(localSearch.getNameArrayList());
+			}
+		}
+		_markFlg = true;
+		repaint();
+	}
 	
 	
 	

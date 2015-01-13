@@ -37,7 +37,7 @@ public class OsmRoadDataGeom extends HandleDbTemplateSuper {
 	/** 道路のクラス */
 	public ArrayList<Integer> _clazz;
 	/** 道路の形状を表す */
-	public ArrayList<ArrayList<Point2D.Double>> _arc;
+	public ArrayList<ArrayList<Point2D>> _arc;
 	
 	public OsmRoadDataGeom(){
 		super(DBNAME, USER, PASS, DBURL, HandleDbTemplateSuper.POSTGRESJDBCDRIVER_STRING);

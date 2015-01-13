@@ -69,7 +69,13 @@ public class MapPanelPaint {
 	}
 	
 	
-	
+	public void paintShopData(boolean _markFlg, ArrayList<Point2D> _lnglatDataArrayList){
+		if(_markFlg){
+			for(Point2D point2d: _lnglatDataArrayList){
+				paint2dEllipse(_convert.convertLngLatToAppletCoordinate((Point2D.Double)point2d), Color.red, _markerSize);
+			}
+		}
+	}
 	
 	
 	
