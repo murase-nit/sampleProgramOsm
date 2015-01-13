@@ -34,5 +34,25 @@
 	1. 外部jarの追加をクリックして，"C:\Program Files (x86)\PostgreSQL\pgJDBC"にpostgis-jdbc-2.0.0.jarやpostgresql-9.3-1100.jdbc41.jarのようなファイルがればそれを追加する
 1. 実行して地図が表示されれば完了
 
+# 使用しているデータベース
+
+* データベース名
+	* osm_road_db
+* テーブル名
+	* osm_japan_car_2po_4pgr
+
+主なデータ
+
+|カラム名|データ型|説明|
+|:----|:------|:-----|
+|id|int|リンクのID|
+|clazz|int|道路クラス|
+|source|int|端点のノードID|
+|target|int|もう一方のノードID|
+|km|double|長さ(km)|
+|x1,y1,x2,y2|double|source,targetのそれぞれの緯度経度|
+|geom|linestring|リンクの形状を表すジオメトリ(arcと呼ぶことがある)|
+
+
 # その他
 YOLPのAPIキーは自分で取得すること
