@@ -62,8 +62,8 @@ public class GeometryParsePostgres {
 	 * @param aGeom
 	 * @return
 	 */
-	public static ArrayList<Point2D.Double> getLineStringMultiPoint(PGgeometry aGeom){
-		ArrayList<Point2D.Double> lineStringMultiPoint = new ArrayList<>();
+	public static ArrayList<Point2D> getLineStringMultiPoint(PGgeometry aGeom){
+		ArrayList<Point2D> lineStringMultiPoint = new ArrayList<>();
 		if(aGeom.getGeoType() == Geometry.LINESTRING){
 			LineString lineString = (LineString)aGeom.getGeometry(); 
 			for(int i=0; i<lineString.numPoints(); i++){

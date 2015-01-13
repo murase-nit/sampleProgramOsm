@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.geom.Point2D;
 import java.util.Hashtable;
 
 import javax.swing.ButtonGroup;
@@ -21,6 +22,7 @@ import javax.swing.JTextField;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import mySrc.panel.inputPanel.categoryMenu.CategoryWindow;
 import mySrc.panel.mapPanel.MapPanel;
 import mySrc.panel.outputPanel.OutputPanel;
 
@@ -35,6 +37,7 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 	private static final int INPUT_PANEL_WINDOW_HEIGHT = MapPanel.UPPER_AREA_HEIGHT;
 	private MapPanel mapPanel;
 	private OutputPanel outputPanel;
+	private CategoryWindow _categoryWindow = new CategoryWindow();
 	
 	// 入力インターフェース ---------------------.
 	// 1番目のパネル.
@@ -344,7 +347,27 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 			locationTextField.setEditable(true);
 		}else if (e.getSource() == changeRoadDataModeButton) {	// 道路データの表示非表示.
 			 mapPanel.insertRoadData();
-		 }
+		}else if (e.getSource() == moveButton) {	// 移動ボタンが押されたときは指定の位置に移動する.
+			String _selectedType = "";
+			Point2D lnglat = new Point2D.Double();
+			if (selectedLnglatRadioButton.isSelected()) {	// ラジオボタン"座標"が選択されているとき.
+				_selectedType = "lnglat";
+				lnglat = new Point2D.Double(Double.parseDouble(lngTextField.getText()), Double.parseDouble(latTextField.getText()));
+			}else {
+				if (selectedAddressRadioButton.isSelected()) {
+					_selectedType = "address";
+				} else {
+					_selectedType = "landmark";
+				}
+			}
+			MapPanel.WINDOW_WIDTH = Integer.parseInt(windowWidthTextField.getText());
+			MapPanel.WINDOW_HEIGHT = Integer.parseInt(windowHeightTextField.getText());
+			this.mapPanel.moveMap((Point2D.Double)lnglat, locationTextField.getText(), _selectedType,  Integer.parseInt((String)scaleBox.getSelectedItem()));	// 移動.
+		}else if(e.getSource() == categoryButton){	// カテゴリボタンが押された.
+			_categoryWindow.openCategoryWindow();
+		} else if (e.getSource() == displayButton) {	// 表示ボタンが押されたときは地図上に指定された条件でマーカーを置く.
+			mapPanel.insertShopData(_categoryWindow.getGroupCode(), "yahoo");
+		}
+		
 	}
-
 }
